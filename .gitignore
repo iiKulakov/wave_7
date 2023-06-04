@@ -6,3 +6,5 @@ yarn-error.log
 public/docs
 cypress/screenshots
 cypress/downloads
+src
+examples
