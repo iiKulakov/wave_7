@@ -169,8 +169,10 @@ class WaveSurfer extends Player {
       try {
         // Fetch and decode the audio of no pre-computed audio data is provided
         const audio = await Fetcher.fetchArrayBuffer(url)
+        console.log('🚀 ~ file: wavesurfer.js ~ line 172 ~ WaveSurfer ~ load ~ audio', audio)
         this.setSrc(url, audio)
         this.decodedData = await Decoder.decode(audio, this.options.sampleRate)
+
         this.emit('decode', this.getDuration())
         this.emit('ready', this.getDuration())
         this.renderer.render(this.decodedData)
