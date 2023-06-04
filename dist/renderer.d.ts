@@ -30,7 +30,6 @@ declare class Renderer extends EventEmitter<RendererEvents> {
     destroy(): void;
     private createDelay;
     private convertColorValues;
-    private renderBars;
     private renderSingleCanvas;
     private renderWaveform;
     render(audioData: AudioBuffer): void;

@@ -29,7 +29,7 @@ export type WaveSurferOptions = {
     /** Audio URL */
     url?: string;
     /** Pre-computed audio data */
-    peaks?: Array<Float32Array | number[]>;
+    peaks?: Float32Array[] | Array<number[]>;
     /** Pre-computed duration */
     duration?: number;
     /** Use an existing media element instead of creating one */
@@ -50,12 +50,8 @@ export type WaveSurferOptions = {
     sampleRate?: number;
     /** Render each audio channel as a separate waveform */
     splitChannels?: WaveSurferOptions[];
-    /** Stretch the waveform to the full height */
-    normalize?: boolean;
     /** The list of plugins to initialize on start */
     plugins?: GenericPlugin[];
-    /** Custom render function */
-    renderFunction?: (peaks: Array<Float32Array | number[]>, ctx: CanvasRenderingContext2D) => void;
 };
 declare const defaultOptions: {
     height: number;

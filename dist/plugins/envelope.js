@@ -2,7 +2,6 @@
  * Envelope is a visual UI for controlling the audio volume and add fade-in and fade-out effects.
  */
 import BasePlugin from '../base-plugin.js';
-import { makeDraggable } from '../draggable.js';
 import EventEmitter from '../event-emitter.js';
 const defaultOptions = {
     fadeInStart: 0,
@@ -76,16 +75,38 @@ class Polyline extends EventEmitter {
                 this.emit('point-move', index, newX / width);
             };
             // Draggable top line of the polyline
-            this.makeDraggable(line, (_, y) => onDragY(y));
+            this.makeDraggable(line, (_, dy) => onDragY(dy));
             // Make each point draggable
             const draggables = this.svg.querySelectorAll('circle');
             Array.from(draggables).forEach((draggable, index) => {
-                this.makeDraggable(draggable, (x) => onDragX(index + 1, x));
+                this.makeDraggable(draggable, (dx) => onDragX(index + 1, dx));
             });
         }
     }
     makeDraggable(draggable, onDrag) {
-        makeDraggable(draggable, onDrag);
+        draggable.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        draggable.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            let x = e.clientX;
+            let y = e.clientY;
+            const move = (e) => {
+                const dx = e.clientX - x;
+                const dy = e.clientY - y;
+                x = e.clientX;
+                y = e.clientY;
+                onDrag(dx, dy);
+            };
+            const up = () => {
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('mouseup', up);
+            };
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', up);
+        });
     }
     update({ x1, x2, x3, x4, y }) {
         const width = this.svg.clientWidth;

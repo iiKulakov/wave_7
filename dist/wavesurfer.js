@@ -162,6 +162,7 @@ class WaveSurfer extends Player {
                 this.decodedData = await Decoder.decode(audio, this.options.sampleRate);
             }
             catch (error) {
+                console.log('🚀 ~ file: wavesurfer.ts ~ line 309 ~ WaveSurfer ~ load ~ error', error);
                 this.emit('error', error);
             }
         }
@@ -196,8 +197,14 @@ class WaveSurfer extends Player {
         this.setTime(time);
     }
     /** Play or pause the audio */
-    async playPause() {
-        return this.isPlaying() ? this.pause() : this.play();
+    playPause() {
+        if (this.isPlaying()) {
+            this.pause();
+            return Promise.resolve();
+        }
+        else {
+            return this.play();
+        }
     }
     /** Stop the audio and go to the beginning */
     stop() {
