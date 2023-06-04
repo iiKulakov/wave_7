@@ -1,5 +1,4 @@
 .DS_Store
-dist
 docs
 node_modules
 yarn-error.log
@@ -8,3 +7,12 @@ cypress/screenshots
 cypress/downloads
 src
 examples
+cypress
+webpack.config.plugins.js
+yarn.lock
+webpack.config.js
+tsconfig.json
+index.html
+cypress.config.js
+.prettierrc
+.eslintrc.json
