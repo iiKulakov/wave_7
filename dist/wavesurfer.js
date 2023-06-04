@@ -158,17 +158,18 @@ class WaveSurfer extends Player {
             try {
                 // Fetch and decode the audio of no pre-computed audio data is provided
                 const audio = await Fetcher.fetchArrayBuffer(url);
+                console.log('🚀 ~ file: wavesurfer.ts ~ line 302 ~ WaveSurfer ~ load ~ audio', audio);
                 this.setSrc(url, audio);
                 this.decodedData = await Decoder.decode(audio, this.options.sampleRate);
+                this.emit('decode', this.getDuration());
+                this.emit('ready', this.getDuration());
+                this.renderer.render(this.decodedData);
             }
             catch (error) {
                 console.log('🚀 ~ file: wavesurfer.ts ~ line 309 ~ WaveSurfer ~ load ~ error', error);
                 this.emit('error', error);
             }
         }
-        this.emit('decode', this.getDuration());
-        this.emit('ready', this.getDuration());
-        this.renderer.render(this.decodedData);
     }
     /** Zoom in or out */
     zoom(minPxPerSec) {
