@@ -22,6 +22,8 @@ export type WaveSurferOptions = {
     barRadius?: number;
     /** A vertical scaling factor for the waveform */
     barHeight?: number;
+    /** Vertical bar alignment **/
+    barAlign?: 'top' | 'bottom';
     /** Minimum pixels per second of audio (i.e. zoom level) */
     minPxPerSec?: number;
     /** Stretch the waveform to fill the container, true by default */
@@ -29,7 +31,7 @@ export type WaveSurferOptions = {
     /** Audio URL */
     url?: string;
     /** Pre-computed audio data */
-    peaks?: Float32Array[] | Array<number[]>;
+    peaks?: Array<Float32Array | number[]>;
     /** Pre-computed duration */
     duration?: number;
     /** Use an existing media element instead of creating one */
@@ -50,11 +52,14 @@ export type WaveSurferOptions = {
     sampleRate?: number;
     /** Render each audio channel as a separate waveform */
     splitChannels?: WaveSurferOptions[];
+    /** Stretch the waveform to the full height */
+    normalize?: boolean;
     /** The list of plugins to initialize on start */
     plugins?: GenericPlugin[];
+    /** Custom render function */
+    renderFunction?: (peaks: Array<Float32Array | number[]>, ctx: CanvasRenderingContext2D) => void;
 };
 declare const defaultOptions: {
-    height: number;
     waveColor: WaveSurferColor;
     progressColor: WaveSurferColor;
     cursorWidth: number;

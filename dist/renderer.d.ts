@@ -9,6 +9,7 @@ type RendererEvents = {
 declare class Renderer extends EventEmitter<RendererEvents> {
     private static MAX_CANVAS_WIDTH;
     private options;
+    private parent;
     private container;
     private scrollContainer;
     private wrapper;
@@ -23,6 +24,7 @@ declare class Renderer extends EventEmitter<RendererEvents> {
     constructor(options: WaveSurferOptions);
     private initEvents;
     private initDrag;
+    private getHeight;
     private initHtml;
     setOptions(options: WaveSurferOptions): void;
     getWrapper(): HTMLElement;
@@ -30,6 +32,7 @@ declare class Renderer extends EventEmitter<RendererEvents> {
     destroy(): void;
     private createDelay;
     private convertColorValues;
+    private renderBars;
     private renderSingleCanvas;
     private renderWaveform;
     render(audioData: AudioBuffer): void;

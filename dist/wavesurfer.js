@@ -4,7 +4,6 @@ import Player from './player.js';
 import Renderer from './renderer.js';
 import Timer from './timer.js';
 const defaultOptions = {
-    height: 128,
     waveColor: '#999',
     progressColor: '#555',
     cursorWidth: 1,
@@ -191,14 +190,8 @@ class WaveSurfer extends Player {
         this.setTime(time);
     }
     /** Play or pause the audio */
-    playPause() {
-        if (this.isPlaying()) {
-            this.pause();
-            return Promise.resolve();
-        }
-        else {
-            return this.play();
-        }
+    async playPause() {
+        return this.isPlaying() ? this.pause() : this.play();
     }
     /** Stop the audio and go to the beginning */
     stop() {

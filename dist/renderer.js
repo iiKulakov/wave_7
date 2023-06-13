@@ -1,3 +1,4 @@
+import { makeDraggable } from './draggable.js';
 import EventEmitter from './event-emitter.js';
 class Renderer extends EventEmitter {
     constructor(options) {
@@ -8,18 +9,19 @@ class Renderer extends EventEmitter {
         this.resizeObserver = null;
         this.isDragging = false;
         this.options = options;
-        let container;
+        let parent;
         if (typeof options.container === 'string') {
-            container = document.querySelector(options.container);
+            parent = document.querySelector(options.container);
         }
         else if (options.container instanceof HTMLElement) {
-            container = options.container;
+            parent = options.container;
         }
-        if (!container) {
+        if (!parent) {
             throw new Error('Container not found');
         }
+        this.parent = parent;
         const [div, shadow] = this.initHtml();
-        container.appendChild(div);
+        parent.appendChild(div);
         this.container = div;
         this.scrollContainer = shadow.querySelector('.scroll');
         this.wrapper = shadow.querySelector('.wrapper');
@@ -53,25 +55,19 @@ class Renderer extends EventEmitter {
         this.resizeObserver.observe(this.scrollContainer);
     }
     initDrag() {
-        this.wrapper.addEventListener('mousedown', (e) => {
-            const minDx = 5;
-            const x = e.clientX;
-            const move = (e) => {
-                const diff = Math.abs(e.clientX - x);
-                if (diff >= minDx) {
-                    this.isDragging = true;
-                    const rect = this.wrapper.getBoundingClientRect();
-                    this.emit('drag', Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)));
-                }
-            };
-            const up = () => {
-                document.removeEventListener('mousemove', move);
-                document.removeEventListener('mouseup', up);
-                this.isDragging = false;
-            };
-            document.addEventListener('mousemove', move);
-            document.addEventListener('mouseup', up);
-        });
+        makeDraggable(this.wrapper, 
+        // On drag
+        (_, __, x) => {
+            this.emit('drag', Math.max(0, Math.min(1, x / this.wrapper.clientWidth)));
+        }, 
+        // On start drag
+        () => (this.isDragging = true), 
+        // On end drag
+        () => (this.isDragging = false));
+    }
+    getHeight() {
+        const defaultHeight = 128;
+        return this.options.height ?? (this.parent.clientHeight || defaultHeight);
     }
     initHtml() {
         const div = document.createElement('div');
@@ -101,7 +97,7 @@ class Renderer extends EventEmitter {
           z-index: 2;
         }
         :host .canvases {
-          min-height: ${this.options.height}px;
+          min-height: ${this.getHeight()}px;
         }
         :host .canvases > div {
           position: relative;
@@ -185,66 +181,77 @@ class Renderer extends EventEmitter {
         });
         return gradient;
     }
-    renderSingleCanvas(channelData, options, width, start, end, canvasContainer, progressContainer) {
-        const pixelRatio = window.devicePixelRatio || 1;
-        const height = options.height || 0;
-        const barWidth = options.barWidth != null && !isNaN(options.barWidth) ? options.barWidth * pixelRatio : 1;
-        const barGap = options.barGap != null && !isNaN(options.barGap)
-            ? options.barGap * pixelRatio
-            : options.barWidth
-                ? barWidth / 2
-                : 0;
-        const barRadius = options.barRadius || 0;
-        const barScale = options.barHeight || 1;
-        const isMono = channelData.length === 1;
-        const leftChannel = channelData[0];
-        const rightChannel = isMono ? leftChannel : channelData[1];
-        const useNegative = isMono && rightChannel.some((v) => v < 0);
-        const length = leftChannel.length;
-        const barCount = Math.floor(width / (barWidth + barGap));
-        const barIndexScale = barCount / length;
-        const halfHeight = height / 2;
-        let prevX = 0;
-        let prevLeft = 0;
-        let prevRight = 0;
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round((width * (end - start)) / length);
-        canvas.height = height;
-        canvas.style.width = `${Math.floor(canvas.width / pixelRatio)}px`;
-        canvas.style.height = `${options.height}px`;
-        canvas.style.left = `${Math.floor((start * width) / pixelRatio / length)}px`;
-        canvasContainer.appendChild(canvas);
-        const ctx = canvas.getContext('2d', {
-            desynchronized: true,
-        });
-        ctx.beginPath();
+    renderBars(channelData, options, ctx) {
         ctx.fillStyle = this.convertColorValues(options.waveColor);
-        // Firefox shim until 2023.04.11
-        if (!ctx.roundRect)
-            ctx.roundRect = ctx.fillRect;
-        for (let i = start; i < end; i++) {
-            const barIndex = Math.round((i - start) * barIndexScale);
-            if (barIndex > prevX) {
-                const leftBarHeight = Math.round(prevLeft * halfHeight * barScale);
-                const rightBarHeight = Math.round(prevRight * halfHeight * barScale);
-                ctx.roundRect(prevX * (barWidth + barGap), halfHeight - leftBarHeight, barWidth, leftBarHeight + (rightBarHeight || 1), barRadius);
-                prevX = barIndex;
-                prevLeft = 0;
-                prevRight = 0;
+        // Custom rendering function
+        if (options.renderFunction) {
+            options.renderFunction(channelData, ctx);
+            return;
+        }
+        const topChannel = channelData[0];
+        const bottomChannel = channelData[1] || channelData[0];
+        const length = topChannel.length;
+        const pixelRatio = window.devicePixelRatio || 1;
+        const { width, height } = ctx.canvas;
+        const halfHeight = height / 2;
+        const barHeight = options.barHeight || 1;
+        const barWidth = options.barWidth ? options.barWidth * pixelRatio : 1;
+        const barGap = options.barGap ? options.barGap * pixelRatio : options.barWidth ? barWidth / 2 : 0;
+        const barRadius = options.barRadius || 0;
+        const barIndexScale = width / (barWidth + barGap) / length;
+        let max = 1;
+        if (options.normalize) {
+            max = 0;
+            for (let i = 0; i < length; i++) {
+                const value = Math.abs(topChannel[i]);
+                if (value > max)
+                    max = value;
             }
-            const leftValue = useNegative ? leftChannel[i] : Math.abs(leftChannel[i]);
-            const rightValue = useNegative ? rightChannel[i] : Math.abs(rightChannel[i]);
-            if (leftValue > prevLeft) {
-                prevLeft = leftValue;
+        }
+        const vScale = (halfHeight / max) * barHeight;
+        ctx.beginPath();
+        let prevX = 0;
+        let maxTop = 0;
+        let maxBottom = 0;
+        for (let i = 0; i <= length; i++) {
+            const x = Math.round(i * barIndexScale);
+            if (x > prevX) {
+                const leftBarHeight = Math.round(maxTop * vScale);
+                const rightBarHeight = Math.round(maxBottom * vScale);
+                const barHeight = leftBarHeight + rightBarHeight || 1;
+                // Vertical alignment
+                let y = halfHeight - leftBarHeight;
+                if (options.barAlign === 'top')
+                    y = 0;
+                else if (options.barAlign === 'bottom')
+                    y = height - barHeight;
+                ctx.roundRect(prevX * (barWidth + barGap), y, barWidth, barHeight, barRadius);
+                prevX = x;
+                maxTop = 0;
+                maxBottom = 0;
             }
-            // If stereo, both channels are drawn as max values
-            // If mono with negative values, the bottom channel will be the min negative values
-            if (useNegative ? rightValue < -prevRight : rightValue > prevRight) {
-                prevRight = rightValue < 0 ? -rightValue : rightValue;
-            }
+            const magnitudeTop = Math.abs(topChannel[i] || 0);
+            const magnitudeBottom = Math.abs(bottomChannel[i] || 0);
+            if (magnitudeTop > maxTop)
+                maxTop = magnitudeTop;
+            if (magnitudeBottom > maxBottom)
+                maxBottom = magnitudeBottom;
         }
         ctx.fill();
         ctx.closePath();
+    }
+    renderSingleCanvas(channelData, options, width, height, start, end, canvasContainer, progressContainer) {
+        const pixelRatio = window.devicePixelRatio || 1;
+        const canvas = document.createElement('canvas');
+        const length = channelData[0].length;
+        canvas.width = Math.round((width * (end - start)) / length);
+        canvas.height = height;
+        canvas.style.width = `${Math.floor(canvas.width / pixelRatio)}px`;
+        canvas.style.height = `${height}px`;
+        canvas.style.left = `${Math.floor((start * width) / pixelRatio / length)}px`;
+        canvasContainer.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        this.renderBars(channelData.map((channel) => channel.slice(start, end)), options, ctx);
         // Draw a progress canvas
         const progressCanvas = canvas.cloneNode();
         progressContainer.appendChild(progressCanvas);
@@ -263,7 +270,8 @@ class Renderer extends EventEmitter {
     renderWaveform(channelData, options, width) {
         // A container for canvases
         const canvasContainer = document.createElement('div');
-        canvasContainer.style.height = `${options.height}px`;
+        const height = this.getHeight();
+        canvasContainer.style.height = `${height}px`;
         this.canvasWrapper.appendChild(canvasContainer);
         // A container for progress canvases
         const progressContainer = canvasContainer.cloneNode();
@@ -278,7 +286,7 @@ class Renderer extends EventEmitter {
         const viewportLen = end - start;
         // Draw a portion of the waveform from start peak to end peak
         const draw = (start, end) => {
-            this.renderSingleCanvas(channelData, options, width, Math.max(0, start), Math.min(end, len), canvasContainer, progressContainer);
+            this.renderSingleCanvas(channelData, options, width, height, Math.max(0, start), Math.min(end, len), canvasContainer, progressContainer);
         };
         // Draw the waveform in viewport chunks, each with a delay
         const headDelay = this.createDelay();

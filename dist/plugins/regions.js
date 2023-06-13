@@ -4,47 +4,8 @@
  * You can set the color and content of each region, as well as their HTML content.
  */
 import BasePlugin from '../base-plugin.js';
+import { makeDraggable } from '../draggable.js';
 import EventEmitter from '../event-emitter.js';
-function makeDraggable(element, onStart, onMove, onEnd, threshold = 5) {
-    if (!element)
-        return () => undefined;
-    let isDragging = false;
-    const onClick = (e) => {
-        isDragging && e.stopPropagation();
-    };
-    const onMouseDown = (e) => {
-        e.stopPropagation();
-        let x = e.clientX;
-        let sumDx = 0;
-        onStart(x);
-        const onMouseMove = (e) => {
-            const newX = e.clientX;
-            const dx = newX - x;
-            sumDx += dx;
-            x = newX;
-            if (isDragging || Math.abs(sumDx) >= threshold) {
-                onMove(isDragging ? dx : sumDx);
-                isDragging = true;
-            }
-        };
-        const onMouseUp = () => {
-            if (isDragging) {
-                onEnd();
-                setTimeout(() => (isDragging = false), 10);
-            }
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        };
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-    };
-    element.addEventListener('click', onClick);
-    element.addEventListener('mousedown', onMouseDown);
-    return () => {
-        element.removeEventListener('click', onClick);
-        element.removeEventListener('mousedown', onMouseDown);
-    };
-}
 export class Region extends EventEmitter {
     constructor(params, totalDuration) {
         super();
@@ -126,16 +87,18 @@ export class Region extends EventEmitter {
     }
     initMouseEvents() {
         const { element } = this;
+        if (!element)
+            return;
         element.addEventListener('click', (e) => this.emit('click', e));
         element.addEventListener('mouseenter', (e) => this.emit('over', e));
         element.addEventListener('mouseleave', (e) => this.emit('leave', e));
         element.addEventListener('dblclick', (e) => this.emit('dblclick', e));
         // Drag
-        makeDraggable(element, () => this.onStartMoving(), (dx) => this.onMove(dx), () => this.onEndMoving());
+        makeDraggable(element, (dx) => this.onMove(dx), () => this.onStartMoving(), () => this.onEndMoving());
         // Resize
         const resizeThreshold = 1;
-        makeDraggable(element.querySelector('[data-resize="left"]'), () => null, (dx) => this.onResize(dx, 'start'), () => this.onEndResizing(), resizeThreshold);
-        makeDraggable(element.querySelector('[data-resize="right"]'), () => null, (dx) => this.onResize(dx, 'end'), () => this.onEndResizing(), resizeThreshold);
+        makeDraggable(element.querySelector('[data-resize="left"]'), (dx) => this.onResize(dx, 'start'), () => null, () => this.onEndResizing(), resizeThreshold);
+        makeDraggable(element.querySelector('[data-resize="right"]'), (dx) => this.onResize(dx, 'end'), () => null, () => this.onEndResizing(), resizeThreshold);
     }
     onStartMoving() {
         if (!this.drag)
@@ -326,20 +289,17 @@ class RegionsPlugin extends BasePlugin {
         if (!wrapper)
             return () => undefined;
         let region = null;
-        let startX = 0;
         let sumDx = 0;
         return makeDraggable(wrapper, 
-        // On mousedown
-        (x) => (startX = x), 
-        // On mousemove
-        (dx) => {
+        // On drag move
+        (dx, _, x) => {
             if (!this.wavesurfer)
                 return;
             if (!region) {
                 const duration = this.wavesurfer.getDuration();
                 const box = wrapper.getBoundingClientRect();
-                let start = ((startX - box.left) / box.width) * duration;
-                let end = ((startX + dx - box.left) / box.width) * duration;
+                let start = (x / box.width) * duration;
+                let end = ((x - box.left) / box.width) * duration;
                 if (start > end)
                     [start, end] = [end, start];
                 region = new Region({
@@ -355,7 +315,9 @@ class RegionsPlugin extends BasePlugin {
                 privateRegion.onUpdate(dx, [sumDx > 0 ? 'end' : 'start']);
             }
         }, 
-        // On mouseup
+        // On drag start
+        () => null, 
+        // On drag end
         () => {
             if (region) {
                 this.saveRegion(region);
