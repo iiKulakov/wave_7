@@ -12,9 +12,9 @@ class RecordPlugin extends BasePlugin {
         return new RecordPlugin(options || {});
     }
     loadBlob(data) {
-        // const blob = new Blob(data, { type: 'audio/mpeg' });
-        // this.recordedUrl = URL.createObjectURL(blob);
-        // this.wavesurfer?.load(this.recordedUrl);
+        const blob = new Blob(data, { type: 'audio/mpeg' });
+        this.recordedUrl = URL.createObjectURL(blob);
+        this.wavesurfer?.load(this.recordedUrl);
     }
     render(stream) {
         if (!this.wavesurfer)

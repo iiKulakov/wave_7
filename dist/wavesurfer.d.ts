@@ -72,7 +72,6 @@ export type WaveSurferEvents = {
     decode: [duration: number];
     /** When the audio is both decoded and can play */
     ready: [duration: number];
-    error: any;
     /** When a waveform is drawn */
     redraw: [];
     /** When the audio starts playing */
