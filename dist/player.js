@@ -37,7 +37,7 @@ class Player extends EventEmitter {
         if (src === url)
             return;
         this.revokeSrc();
-        const newSrc = arrayBuffer ? URL.createObjectURL(new Blob([arrayBuffer], { type: 'audio/wav' })) : url;
+        const newSrc = arrayBuffer ? URL.createObjectURL(new Blob([arrayBuffer], { type: 'audio/mpeg' })) : url;
         this.media.src = newSrc;
     }
     destroy() {
