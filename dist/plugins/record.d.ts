@@ -13,6 +13,7 @@ export type RecordPluginEvents = {
 declare class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
     private mediaRecorder;
     private recordedUrl;
+    private recordedUrl_1;
     static create(options?: RecordPluginOptions): RecordPlugin;
     private loadBlob;
     render(stream: MediaStream): () => void;
@@ -21,6 +22,7 @@ declare class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOp
     isRecording(): boolean;
     stopRecording(): void;
     getRecordedUrl(): string;
+    getRecordedUrl_1(): string;
     destroy(): void;
 }
 export default RecordPlugin;

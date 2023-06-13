@@ -7,12 +7,14 @@ class RecordPlugin extends BasePlugin {
         super(...arguments);
         this.mediaRecorder = null;
         this.recordedUrl = '';
+        this.recordedUrl_1 = '';
     }
     static create(options) {
         return new RecordPlugin(options || {});
     }
     loadBlob(data) {
         const blob = new Blob(data, { type: 'audio/mpeg' });
+        this.recordedUrl_1 = data;
         this.recordedUrl = URL.createObjectURL(blob);
         // this.wavesurfer?.load(this.recordedUrl)
     }
@@ -118,6 +120,9 @@ class RecordPlugin extends BasePlugin {
     }
     getRecordedUrl() {
         return this.recordedUrl;
+    }
+    getRecordedUrl_1() {
+        return this.recordedUrl_1;
     }
     destroy() {
         super.destroy();
